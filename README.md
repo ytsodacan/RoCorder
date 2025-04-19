@@ -38,23 +38,6 @@ This project captures Roblox gameplay and assets, then exports them to a `.soda`
 
 ---
 
-## Folder Structure
-
-
-├── exports/
-│   ├── recorded_data.soda
-│   ├── models/
-│   │   ├── mesh_.fbx
-│   │   ├── prim_.json
-│   │   └── characters/
-│   │       └── /…
-│   ├── textures/
-│   │   └── tex_.png
-│   └── animations/
-│       └── anim_.rbxanim
-├── asset_server.py
-├── import_soda_to_blender.py
----
 
 ## Pipeline
 
