@@ -40,7 +40,7 @@ This project captures Roblox gameplay and assets, then exports them to a `.soda`
 
 ## Folder Structure
 
-#.
+
 ├── exports/
 │   ├── recorded_data.soda
 │   ├── models/
