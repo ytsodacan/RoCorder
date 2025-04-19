@@ -1,3 +1,5 @@
+# File: asset_server.py
+
 from flask import Flask, request, jsonify
 import os, json, requests
 
@@ -7,13 +9,15 @@ MODEL_DIR  = os.path.join(EXPORT_DIR, "models")
 TEX_DIR    = os.path.join(EXPORT_DIR, "textures")
 ANIM_DIR   = os.path.join(EXPORT_DIR, "animations")
 CHAR_DIR   = os.path.join(MODEL_DIR, "characters")
+GUI_DIR    = os.path.join(EXPORT_DIR, "gui")
+SND_DIR    = os.path.join(EXPORT_DIR, "sounds")
 
-for d in (EXPORT_DIR, MODEL_DIR, TEX_DIR, ANIM_DIR, CHAR_DIR):
+for d in (EXPORT_DIR, MODEL_DIR, TEX_DIR, ANIM_DIR, CHAR_DIR, GUI_DIR, SND_DIR):
     os.makedirs(d, exist_ok=True)
 
 def download_asset(aid, dest):
     url = f"https://assetdelivery.roblox.com/v1/asset/?id={aid}"
-    print(f"→ Downloading asset {aid} to {dest}…", end="")
+    print(f"→ Downloading {aid} → {dest}…", end="")
     r = requests.get(url, timeout=10)
     r.raise_for_status()
     with open(dest, "wb") as f:
@@ -31,86 +35,95 @@ def record_data():
 
 @app.route("/assets", methods=["POST"])
 def receive_assets():
-    data        = request.get_json()
-    models      = data.get("models", [])
-    textures    = data.get("textures", [])
-    animations  = data.get("animations", [])
-    characters  = data.get("characters", [])
+    d = request.get_json()
+    print(f"🔄 /assets: models={len(d['models'])}, textures={len(d['textures'])}, "
+          f"anims={len(d['animations'])}, chars={len(d['characters'])}, "
+          f"gui={len(d['guiImages'])}, sounds={len(d['sounds'])}")
 
-    print("🔄 Received assets payload:")
-    print(f"   • {len(models)} model refs")
-    print(f"   • {len(textures)} texture refs")
-    print(f"   • {len(animations)} animations")
-    print(f"   • {len(characters)} character entries")
-
-    # --- Download mesh assets ---
-    for idx, m in enumerate(models, start=1):
+    # Meshes & primitives
+    for m in d["models"]:
         if isinstance(m, str):
             aid = "".join(filter(str.isdigit, m))
-            dest = os.path.join(MODEL_DIR, f"mesh_{aid}.fbx")
-            if not os.path.exists(dest):
+            dst = os.path.join(MODEL_DIR, f"mesh_{aid}.fbx")
+            if not os.path.exists(dst):
                 try:
-                    download_asset(aid, dest)
+                    download_asset(aid, dst)
                 except Exception as e:
-                    print(f"✖️ Failed mesh {aid}:", e)
+                    print("✖️ mesh", aid, e)
             else:
-                print(f"• Mesh {aid} already exists, skipping.")
+                print(f"• mesh_{aid}.fbx exists")
         else:
             name = f"prim_{m['primitive']}_{m['size'][0]}x{m['size'][1]}x{m['size'][2]}.json"
-            dest = os.path.join(MODEL_DIR, name)
-            with open(dest, "w") as f:
+            with open(os.path.join(MODEL_DIR, name), "w") as f:
                 json.dump(m, f)
-            print(f"✔️ Wrote primitive descriptor → {name}")
+            print(f"✔️ Wrote {name}")
 
-    # --- Download textures ---
-    for idx, t in enumerate(textures, start=1):
-        aid = "".join(filter(str.isdigit, t))
-        dest = os.path.join(TEX_DIR, f"tex_{aid}.png")
-        if not os.path.exists(dest):
+    # Textures
+    for t in d["textures"]:
+        aid, dst = "".join(filter(str.isdigit, t)), os.path.join(TEX_DIR, f"tex_{aid}.png")
+        if not os.path.exists(dst):
             try:
-                download_asset(aid, dest)
+                download_asset(aid, dst)
             except Exception as e:
-                print(f"✖️ Failed texture {aid}:", e)
+                print("✖️ tex", aid, e)
         else:
-            print(f"• Texture {aid} already exists, skipping.")
+            print(f"• tex_{aid}.png exists")
 
-    # --- Download animations ---
-    for idx, a in enumerate(animations, start=1):
-        aid = "".join(filter(str.isdigit, a))
-        dest = os.path.join(ANIM_DIR, f"anim_{aid}.rbxanim")
-        if not os.path.exists(dest):
+    # Animations
+    for a in d["animations"]:
+        aid, dst = "".join(filter(str.isdigit, a)), os.path.join(ANIM_DIR, f"anim_{aid}.rbxanim")
+        if not os.path.exists(dst):
             try:
-                download_asset(aid, dest)
+                download_asset(aid, dst)
             except Exception as e:
-                print(f"✖️ Failed animation {aid}:", e)
+                print("✖️ anim", aid, e)
         else:
-            print(f"• Animation {aid} already exists, skipping.")
+            print(f"• anim_{aid}.rbxanim exists")
 
-    # --- Download character parts ---
-    for cidx, char in enumerate(characters, start=1):
-        cname = char["name"]
-        cdir  = os.path.join(CHAR_DIR, cname)
+    # Characters
+    for char in d["characters"]:
+        cdir = os.path.join(CHAR_DIR, char["name"])
         os.makedirs(cdir, exist_ok=True)
-        print(f"— Processing character '{cname}' ({cidx}/{len(characters)}) —")
-        for pidx, part in enumerate(char["parts"], start=1):
-            if "meshId" in part:
-                aid = "".join(filter(str.isdigit, part["meshId"]))
-                dest = os.path.join(cdir, f"mesh_{aid}.fbx")
-                if not os.path.exists(dest):
+        print(f"— char {char['name']}")
+        for p in char["parts"]:
+            if "meshId" in p:
+                aid, dst = "".join(filter(str.isdigit, p["meshId"])), os.path.join(cdir, f"mesh_{aid}.fbx")
+                if not os.path.exists(dst):
                     try:
-                        download_asset(aid, dest)
+                        download_asset(aid, dst)
                     except Exception as e:
-                        print(f"✖️ Failed char mesh {aid}:", e)
+                        print("✖️ char mesh", aid, e)
                 else:
-                    print(f"• Char mesh {aid} exists, skipping.")
+                    print(f"• char mesh_{aid}.fbx exists")
             else:
-                name = f"prim_{part['primitive']}_{part['size'][0]}x{part['size'][1]}x{part['size'][2]}.json"
-                dest = os.path.join(cdir, name)
-                with open(dest, "w") as f:
-                    json.dump(part, f)
-                print(f"✔️ Wrote char primitive → {name}")
+                name = f"prim_{p['primitive']}_{p['size'][0]}x{p['size'][1]}x{p['size'][2]}.json"
+                with open(os.path.join(cdir, name), "w") as f:
+                    json.dump(p, f)
+                print(f"✔️ Wrote char {name}")
 
-    print("🎉 Asset download complete.")
+    # GUI images
+    for g in d["guiImages"]:
+        aid, dst = "".join(filter(str.isdigit, g)), os.path.join(GUI_DIR, f"gui_{aid}.png")
+        if not os.path.exists(dst):
+            try:
+                download_asset(aid, dst)
+            except Exception as e:
+                print("✖️ gui", aid, e)
+        else:
+            print(f"• gui_{aid}.png exists")
+
+    # Sounds
+    for s in d["sounds"]:
+        aid, dst = "".join(filter(str.isdigit, s)), os.path.join(SND_DIR, f"sound_{aid}.ogg")
+        if not os.path.exists(dst):
+            try:
+                download_asset(aid, dst)
+            except Exception as e:
+                print("✖️ sound", aid, e)
+        else:
+            print(f"• sound_{aid}.ogg exists")
+
+    print("🎉 All assets downloaded.")
     return jsonify(status="ok"), 200
 
 if __name__ == "__main__":
