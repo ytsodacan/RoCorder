@@ -43,7 +43,7 @@ This project captures Roblox gameplay and assets, then exports them to a `.soda`
 
 1. **Run Python Server**
    ```bash
-   pip install flask requests
+   pip install flask requests bpy
    python asset_server.py
 2.	Run Roblox in Play Mode
 	•	Press M → sends map + asset data to /assets
