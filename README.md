@@ -1,4 +1,4 @@
-# Roblox Replay Exporter to Blender
+# RoCorder
 
 This project captures Roblox gameplay and assets, then exports them to a `.soda` format and associated model folders — all of which can be imported into **Blender** for replay visualization, editing, and animation.
 
